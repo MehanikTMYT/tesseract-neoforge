@@ -32,6 +32,7 @@ tasks.withType(ProcessResources).configureEach {
 }
 jar { from 'LICENSE' }
 java.withSourcesJar()
+tasks.named('sourcesJar') { from 'LICENSE' }
 publishing { publications { mavenJava(MavenPublication) { from components.java; artifactId = project.artifact_name } } }
 accessTransformers { file('src/main/resources/tesseract_api.accesstransformer.cfg') }
 

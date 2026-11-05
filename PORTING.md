@@ -84,3 +84,9 @@ missing JEI target warning from the external EMI artifact; JEI is not installed.
 All 20 required bridge classes and embedded API were checked in the published
 jar. Published jar SHA256:
 `373c78a7049ddf86c6bf1319b913a290636229df958e11586eb571582a962a67`.
+
+Final packaging: the sources jar now also includes the original MIT LICENSE,
+matching the binary jar. `build-license.log` and `publish-license.log`: PASS,
+exit 0. Published binary SHA256 is unchanged from the client/server loader
+verification; the source-only packaging update does not alter runtime code.
+Both published jars and all 20 required classes were rechecked.
