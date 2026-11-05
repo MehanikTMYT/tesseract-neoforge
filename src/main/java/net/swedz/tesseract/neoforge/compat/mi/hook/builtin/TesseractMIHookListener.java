@@ -1,0 +1,26 @@
+package net.swedz.tesseract.neoforge.compat.mi.hook.builtin;
+
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.configurationpanel.ConfigurationPanel;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.configurationpanel.ConfigurationPanelClient;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.modularmultiblock.ModularMultiblockGui;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.modularmultiblock.ModularMultiblockGuiClient;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.recipeefficiency.ModularRecipeEfficiencyBar;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.recipeefficiency.ModularRecipeEfficiencyBarClient;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.slotpanel.ModularSlotPanel;
+import net.swedz.tesseract.neoforge.compat.mi.guicomponent.slotpanel.ModularSlotPanelClient;
+import net.swedz.tesseract.neoforge.compat.mi.hook.MIHookEntrypoint;
+import net.swedz.tesseract.neoforge.compat.mi.hook.MIHookListener;
+import net.swedz.tesseract.neoforge.compat.mi.hook.context.listener.ClientGuiComponentsMIHookContext;
+
+@MIHookEntrypoint
+public final class TesseractMIHookListener implements MIHookListener
+{
+	@Override
+	public void clientGuiComponents(ClientGuiComponentsMIHookContext hook)
+	{
+		hook.register(ConfigurationPanel.TYPE, ConfigurationPanelClient::new);
+		hook.register(ModularMultiblockGui.TYPE, ModularMultiblockGuiClient::new);
+		hook.register(ModularRecipeEfficiencyBar.TYPE, ModularRecipeEfficiencyBarClient::new);
+		hook.register(ModularSlotPanel.TYPE, ModularSlotPanelClient::new);
+	}
+}

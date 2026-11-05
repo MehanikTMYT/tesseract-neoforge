@@ -1,0 +1,457 @@
+package net.swedz.tesseract.neoforge.compat.mi.component.craft.multiplied;
+
+import aztech.modern_industrialization.inventory.ConfigurableFluidStack;
+import aztech.modern_industrialization.inventory.ConfigurableItemStack;
+import aztech.modern_industrialization.inventory.MIItemStorage;
+import aztech.modern_industrialization.machines.MachineBlockEntity;
+import aztech.modern_industrialization.machines.components.CrafterComponent;
+import aztech.modern_industrialization.machines.recipe.MachineRecipe;
+import aztech.modern_industrialization.machines.recipe.MachineRecipeType;
+import net.neoforged.neoforge.transfer.fluid.FluidResource;
+import net.neoforged.neoforge.transfer.item.ItemResource;
+import net.neoforged.neoforge.transfer.transaction.Transaction;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.storage.ValueInput;
+import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.crafting.RecipeHolder;
+import net.swedz.tesseract.neoforge.compat.mi.component.craft.AbstractModularCrafterComponent;
+import net.swedz.tesseract.neoforge.compat.mi.component.craft.ModularCrafterAccessBehavior;
+import net.swedz.tesseract.neoforge.compat.mi.helper.CrafterComponentHelper;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Set;
+import java.util.function.Supplier;
+
+public final class MultipliedCrafterComponent extends AbstractModularCrafterComponent<RecipeHolder<MachineRecipe>>
+{
+	private final Supplier<MachineRecipeType> recipeTypeGetter;
+	private final Supplier<Integer>           maxMultiplierGetter;
+	private final Supplier<EuCostTransformer> euCostTransformer;
+
+	private int tryRecipeMultiplier = 0;
+	private int recipeMultiplier    = 0;
+
+	public MultipliedCrafterComponent(MachineBlockEntity blockEntity, CrafterComponent.Inventory inventory, ModularCrafterAccessBehavior behavior,
+									  Supplier<MachineRecipeType> recipeTypeGetter, Supplier<Integer> maxMultiplierGetter, Supplier<EuCostTransformer> euCostTransformer)
+	{
+		super(blockEntity, inventory, behavior);
+		this.recipeTypeGetter = recipeTypeGetter;
+		this.maxMultiplierGetter = maxMultiplierGetter;
+		this.euCostTransformer = euCostTransformer;
+	}
+
+	public MachineRecipeType getRecipeType()
+	{
+		return recipeTypeGetter.get();
+	}
+
+	public int getRecipeMultiplier()
+	{
+		return recipeMultiplier;
+	}
+
+	public int getMaxMultiplier()
+	{
+		return maxMultiplierGetter.get();
+	}
+
+	@Override
+	public long transformEuCost(long eu, long bonusEu)
+	{
+		return euCostTransformer.get().transform(this, eu, bonusEu);
+	}
+
+	@Override
+	protected boolean canContinueRecipe()
+	{
+		return recipeMultiplier != 0;
+	}
+
+	@Override
+	protected Identifier getRecipeId(RecipeHolder<MachineRecipe> recipe)
+	{
+		return recipe.id().identifier();
+	}
+
+	@Override
+	protected RecipeHolder<MachineRecipe> getRecipeById(Identifier recipeId)
+	{
+		MachineRecipeType type = this.getRecipeType();
+		return type != null ? type.getRecipe(behavior.getCrafterWorld(), recipeId) : null;
+	}
+
+	@Override
+	public long getBaseRecipeEu()
+	{
+		return activeRecipe.value().eu;
+	}
+
+	@Override
+	public long getRecipeEuCost(RecipeHolder<MachineRecipe> recipe)
+	{
+		return recipe.value().eu;
+	}
+
+	@Override
+	public long getRecipeTotalEuCost(RecipeHolder<MachineRecipe> recipe)
+	{
+		return recipe.value().getTotalEu();
+	}
+
+	@Override
+	public boolean doConditionsMatchForRecipe(RecipeHolder<MachineRecipe> recipe)
+	{
+		return recipe.value().conditionsMatch(conditionContext);
+	}
+
+	@Override
+	protected void onTick()
+	{
+	}
+
+	@Override
+	protected boolean recipesOverlap(RecipeHolder<MachineRecipe> first, RecipeHolder<MachineRecipe> second)
+	{
+		for(var stack : inventory.getFluidInputs())
+		{
+			for(var input : first.value().fluidInputs)
+			{
+				if(input.fluid().test(stack.toStack()))
+				{
+					for(var otherInput : second.value().fluidInputs)
+					{
+						if(otherInput.fluid().test(stack.toStack()))
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		for(var stack : inventory.getItemInputs())
+		{
+			for(var input : first.value().itemInputs)
+			{
+				if(input.matches(stack.toStack()))
+				{
+					for(var otherInput : second.value().itemInputs)
+					{
+						if(otherInput.matches(stack.toStack()))
+						{
+							return true;
+						}
+					}
+				}
+			}
+		}
+		return false;
+	}
+
+	@Override
+	protected Collection<RecipeHolder<MachineRecipe>> getRecipes()
+	{
+		if(this.getRecipeType() == null)
+		{
+			return Collections.emptyList();
+		}
+		else if(efficiencyTicks > 0)
+		{
+			return Collections.singletonList(activeRecipe);
+		}
+		else
+		{
+			ServerLevel serverWorld = behavior.getCrafterWorld();
+			MachineRecipeType recipeType = this.getRecipeType();
+			Set<RecipeHolder<MachineRecipe>> recipes = Sets.newHashSet(recipeType.getFluidOnlyRecipes(serverWorld));
+			for(ConfigurableItemStack stack : inventory.getItemInputs())
+			{
+				if(!stack.isEmpty())
+				{
+					recipes.addAll(recipeType.getMatchingRecipes(serverWorld, stack.getResource().getItem()));
+				}
+			}
+			return recipes;
+		}
+	}
+
+	private int calculateItemInputRecipeMultiplier(MachineRecipe recipe)
+	{
+		List<ItemStack> itemsInHatches = Lists.newArrayList();
+		for(var stack : inventory.getItemInputs())
+		{
+			itemsInHatches.add(stack.toStack());
+		}
+
+		int itemMultiplier = this.getMaxMultiplier();
+		for(MachineRecipe.ItemInput input : recipe.itemInputs)
+		{
+			int countItemsInHatches = 0;
+			for(ItemStack stack : itemsInHatches)
+			{
+				if(input.matches(stack))
+				{
+					countItemsInHatches += stack.getCount();
+				}
+			}
+
+			if(input.probability() == 0f && countItemsInHatches >= input.amount())
+			{
+				continue;
+			}
+
+			int multiplier = countItemsInHatches / input.amount();
+			if(multiplier < itemMultiplier)
+			{
+				itemMultiplier = multiplier;
+			}
+			if(itemMultiplier <= 1)
+			{
+				break;
+			}
+		}
+		return itemMultiplier;
+	}
+
+	private int calculateItemOutputRecipeMultiplier(MachineRecipe recipe)
+	{
+		int multiplier = 1;
+		int maxMultiplier = this.getMaxMultiplier();
+		while(multiplier < maxMultiplier)
+		{
+			int middleMultiplier = (multiplier + maxMultiplier + 1) / 2;
+			if(this.canItemOutputsAllFit(recipe, middleMultiplier))
+			{
+				multiplier = middleMultiplier;
+			}
+			else
+			{
+				maxMultiplier = middleMultiplier - 1;
+			}
+		}
+		return multiplier;
+	}
+
+	private boolean canItemOutputsAllFit(MachineRecipe recipe, int multiplier)
+	{
+		try(Transaction transaction = Transaction.openRoot())
+		{
+			MIItemStorage outputStorage = new MIItemStorage(inventory.getItemOutputs());
+
+			for(MachineRecipe.ItemOutput output : recipe.itemOutputs)
+			{
+				if(output.probability() < 1)
+				{
+					continue;
+				}
+
+				int outputAmount = output.template().count() * multiplier;
+				long inserted = outputStorage.insert(ItemResource.of(output.getStack()), outputAmount, transaction);
+				if(inserted != outputAmount)
+				{
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+
+	private int calculateFluidInputRecipeMultiplier(MachineRecipe recipe)
+	{
+		int fluidMultiplier = this.getMaxMultiplier();
+		for(MachineRecipe.FluidInput input : recipe.fluidInputs)
+		{
+			long countFluidInHatches = 0;
+			for(ConfigurableFluidStack stack : inventory.getFluidInputs())
+			{
+				if(CrafterComponentHelper.fluidIngredientMatch(stack.getResource(), input.fluid()))
+				{
+					countFluidInHatches += stack.getAmount();
+				}
+			}
+
+			if(input.probability() == 0f && countFluidInHatches >= input.amount())
+			{
+				continue;
+			}
+
+			int multiplier = (int) (countFluidInHatches / input.amount());
+			if(multiplier < fluidMultiplier)
+			{
+				fluidMultiplier = multiplier;
+			}
+			if(fluidMultiplier <= 1)
+			{
+				break;
+			}
+		}
+		return fluidMultiplier;
+	}
+
+	private int calculateFluidOutputRecipeMultiplier(MachineRecipe recipe)
+	{
+		int fluidMultiplier = this.getMaxMultiplier();
+		for(int i = 0; i < Math.min(recipe.fluidOutputs.size(), behavior.getMaxFluidOutputs()); ++i)
+		{
+			MachineRecipe.FluidOutput output = recipe.fluidOutputs.get(i);
+
+			if(output.probability() < 1)
+			{
+				continue;
+			}
+
+			long maxOutputCount = output.amount() * this.getMaxMultiplier();
+
+			outer:
+			for(int tries = 0; tries < 2; tries++)
+			{
+				for(ConfigurableFluidStack stack : inventory.getFluidOutputs())
+				{
+					FluidResource outputKey = FluidResource.of(output.fluid());
+					if(stack.isResourceAllowedByLock(outputKey) && ((tries == 1 && stack.getResource().isEmpty()) || stack.getResource().equals(outputKey)))
+					{
+						long outputSpace = Math.min(stack.getRemainingSpace(), maxOutputCount);
+
+						int multiplier = (int) (outputSpace / output.amount());
+						if(multiplier < fluidMultiplier)
+						{
+							fluidMultiplier = multiplier;
+						}
+						if(fluidMultiplier <= 1)
+						{
+							break outer;
+						}
+					}
+				}
+			}
+		}
+
+		return fluidMultiplier;
+	}
+
+	private int calculateMultiplier(RecipeHolder<MachineRecipe> recipe)
+	{
+		if(this.getMaxMultiplier() > 1)
+		{
+			int itemInputMultiplier = this.calculateItemInputRecipeMultiplier(recipe.value());
+			if(itemInputMultiplier > 1)
+			{
+				int itemOutputMultiplier = this.calculateItemOutputRecipeMultiplier(recipe.value());
+				if(itemOutputMultiplier > 1)
+				{
+					int itemMultiplier = Math.min(itemInputMultiplier, itemOutputMultiplier);
+
+					int fluidInputMultiplier = this.calculateFluidInputRecipeMultiplier(recipe.value());
+					if(fluidInputMultiplier > 1)
+					{
+						int fluidOutputMultiplier = this.calculateFluidOutputRecipeMultiplier(recipe.value());
+						if(fluidOutputMultiplier > 1)
+						{
+							int fluidMultiplier = Math.min(fluidInputMultiplier, fluidOutputMultiplier);
+							return Math.min(itemMultiplier, fluidMultiplier);
+						}
+					}
+				}
+			}
+		}
+		return 1;
+	}
+
+	@Override
+	protected boolean takeItemInputs(RecipeHolder<MachineRecipe> recipeHolder, boolean simulate)
+	{
+		return CrafterComponentHelper.takeItemInputs(recipeHolder.value(), simulate, behavior, inventory, tryRecipeMultiplier);
+	}
+
+	@Override
+	protected boolean takeFluidInputs(RecipeHolder<MachineRecipe> recipeHolder, boolean simulate)
+	{
+		return CrafterComponentHelper.takeFluidInputs(recipeHolder.value(), simulate, behavior, inventory, tryRecipeMultiplier);
+	}
+
+	@Override
+	protected boolean putItemOutputs(RecipeHolder<MachineRecipe> recipeHolder, boolean simulate, boolean toggleLock)
+	{
+		return CrafterComponentHelper.putItemOutputs(recipeHolder.value(), simulate, toggleLock, behavior, inventory, tryRecipeMultiplier == 0 ? recipeMultiplier : tryRecipeMultiplier);
+	}
+
+	@Override
+	protected boolean putFluidOutputs(RecipeHolder<MachineRecipe> recipeHolder, boolean simulate, boolean toggleLock)
+	{
+		return CrafterComponentHelper.putFluidOutputs(recipeHolder.value(), simulate, toggleLock, behavior, inventory, tryRecipeMultiplier == 0 ? recipeMultiplier : tryRecipeMultiplier);
+	}
+
+	@Override
+	protected boolean canStartRecipe(RecipeHolder<MachineRecipe> recipe, boolean ignoreConditions)
+	{
+		tryRecipeMultiplier = this.calculateMultiplier(recipe);
+		boolean success = super.canStartRecipe(recipe, ignoreConditions);
+		tryRecipeMultiplier = 0;
+		return success;
+	}
+
+	@Override
+	protected boolean tryStartRecipe(RecipeHolder<MachineRecipe> recipe)
+	{
+		tryRecipeMultiplier = this.calculateMultiplier(recipe);
+		recipeMultiplier = 1;
+		try
+		{
+			if(super.canStartRecipe(recipe, false))
+			{
+				recipeMultiplier = tryRecipeMultiplier;
+				this.takeInputs(recipe, false);
+				this.putOutputs(recipe, true, true);
+				return true;
+			}
+			return false;
+		}
+		finally
+		{
+			tryRecipeMultiplier = 0;
+		}
+	}
+
+	@Override
+	public void writeNbt(ValueOutput tag)
+	{
+		super.writeNbt(tag);
+		tag.putInt("recipeMultiplier", recipeMultiplier);
+	}
+
+	@Override
+	public void readNbt(ValueInput tag, boolean isUpgradingMachine)
+	{
+		super.readNbt(tag, isUpgradingMachine);
+		recipeMultiplier = tag.getIntOr("recipeMultiplier", 0);
+	}
+
+	@Override
+	protected void clearActiveRecipes()
+	{
+		super.clearActiveRecipes();
+		recipeMultiplier = 0;
+	}
+
+	@Override
+	public void lockRecipe(Identifier recipeId, Inventory inventory)
+	{
+		MachineRecipeType recipeType = this.getRecipeType();
+		if(recipeType == null)
+		{
+			return;
+		}
+		recipeType.getRecipesWithCache(behavior.getCrafterWorld()).stream()
+				.filter((recipe) -> recipe.id().identifier().equals(recipeId))
+				.findFirst()
+				.ifPresent((recipe) -> CrafterComponentHelper.lockRecipe(recipe.value(), inventory, this.inventory));
+	}
+}

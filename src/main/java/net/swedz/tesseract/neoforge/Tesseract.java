@@ -28,20 +28,20 @@ public final class Tesseract
 {
 	public static final String ID   = "tesseract_api";
 	public static final String NAME = "Tesseract API";
-	
+
 	public static Identifier id(String path)
 	{
 		return Identifier.fromNamespaceAndPath(ID, path);
 	}
-	
+
 	public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
-	
+
 	public Tesseract(IEventBus bus)
 	{
 		Proxies.initialize();
-		
+
 		setupText();
-		
+
 		if(ModLoadedHelper.isLoaded("modern_industrialization"))
 		{
 			try
@@ -51,13 +51,12 @@ public final class Tesseract
 			catch (ClassNotFoundException ignored)
 			{
 			}
-			// TODO TesseractMILootConditions.init(bus);
-			// TODO MIHookTracker.registerRecipeCategoryForMachines(bus);
+			net.swedz.tesseract.neoforge.compat.mi.TesseractMILootConditions.init(bus);
 		}
-		
+
 		bus.addListener(GatherDataEvent.Client.class, (event) ->
 				event.getGenerator().addProvider(true, new LanguageDatagenProvider(event)));
-		
+
 		NeoForge.EVENT_BUS.addListener(EntityTickEvent.Pre.class, (event) ->
 		{
 			if(event.getEntity() instanceof LivingEntity entity)
@@ -76,7 +75,7 @@ public final class Tesseract
 				}
 			}
 		});
-		
+
 		NeoForge.EVENT_BUS.addListener(LivingEquipmentChangeEvent.class, (event) ->
 		{
 			if(!event.getFrom().isEmpty() &&
@@ -85,7 +84,7 @@ public final class Tesseract
 				handler.onUnequipArmor(event.getEntity(), event.getSlot(), event.getFrom(), event.getTo());
 			}
 		});
-		
+
 		NeoForge.EVENT_BUS.addListener(ItemHurtEvent.class, (event) ->
 		{
 			if(event.getItemStack().getItem() instanceof ItemHurtHandler handler)
@@ -93,18 +92,18 @@ public final class Tesseract
 				handler.onHurt(event.getEntity(), event.getItemStack(), event.getDamageAmount());
 			}
 		});
-		
+
 		LOGGER.info("Tesseract API has completed initialization!");
 	}
-	
+
 	private static TesseractText TEXT;
-	
+
 	public static TesseractText text()
 	{
 		Assert.notNull(TEXT, "Text not loaded yet");
 		return TEXT;
 	}
-	
+
 	private static void setupText()
 	{
 		var instance = new LangManager(ID)

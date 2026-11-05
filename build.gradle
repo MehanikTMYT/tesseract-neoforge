@@ -1,55 +1,46 @@
 plugins {
-    id 'java-library'
-    id 'idea'
-    id 'maven-publish'
-    id 'net.neoforged.moddev'
-    id 'net.swedz.deploy-inator' version '1.0.1'
+ id 'java-library'
+ id 'maven-publish'
+ id 'net.neoforged.gradle.userdev' version '7.1.38'
 }
-
-configurations {
-    runtimeClasspath.extendsFrom localImplementation
-    compileClasspath.extendsFrom localImplementation
-}
-
-version = (System.getenv("MOD_VERSION") ?: "0.0.0-local") + "-${minecraft_version}"
+version = mod_version
 group = mod_group_id
-base {
-    archivesName = artifact_name
-}
-
-logger.lifecycle("${mod_name} version ${version}")
-
-apply from: 'dependencies.gradle'
-
-tasks.named('jar') {
-    from "LICENSE"
-}
-
-tasks.register("sourceJar", Jar) {
-    archiveClassifier.set("sources")
-    from sourceSets.main.allJava
-    from "LICENSE"
-}
-
-apply from: 'deploy.gradle'
-
-apply from: 'neoforge.gradle'
-
+base { archivesName = artifact_name }
 java.toolchain.languageVersion = JavaLanguageVersion.of(25)
-
-sourceSets.main.resources { srcDir 'src/generated/resources' }
-
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
+repositories {
+ mavenLocal()
+ mavenCentral()
+ maven { url = 'https://modmaven.dev' }
 }
-
-idea {
-    module {
-        downloadSources = true
-        downloadJavadoc = true
-    }
+jarJar.enable()
+dependencies {
+ implementation "net.neoforged:neoforge:${neoforge_version}"
+ implementation "net.swedz:tesseract-api:${tesseract_version}"
+ jarJar("net.swedz:tesseract-api:${tesseract_version}") { version { strictly tesseract_version_range; prefer tesseract_version } }
+ implementation("aztech:Modern-Industrialization:${modern_industrialization_version}") { transitive = false }
+ implementation('dev.emi:emi-neoforge:1.1.24-semi151a6c88+26.1.2') { transitive = false }
 }
-
-processResources {
-    exclude(".cache")
+runs { configureEach { modSource project.sourceSets.main }; client {}; server { argument '--nogui' } }
+sourceSets.main.resources.srcDir 'src/generated/resources'
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.compilerArgs += ['-Xmaxerrs', '1000'] }
+tasks.withType(ProcessResources).configureEach {
+ def props = project.properties.findAll { k,v -> k.startsWith('mod_') || k.endsWith('_range') || k in ['minecraft_version','neoforge_version'] } + [mod_version: project.version.toString()]
+ inputs.properties(props)
+ filesMatching('META-INF/neoforge.mods.toml') { expand props }
+ exclude('.cache')
+ duplicatesStrategy = 'exclude'
 }
+jar { from 'LICENSE' }
+java.withSourcesJar()
+publishing { publications { mavenJava(MavenPublication) { from components.java; artifactId = project.artifact_name } } }
+accessTransformers { file('src/main/resources/tesseract_api.accesstransformer.cfg') }
+
+sourceSets.main.java.exclude('net/swedz/tesseract/neoforge/compat/mi/material/**')
+sourceSets.main.java.exclude('net/swedz/tesseract/neoforge/registry/holder/MIFluidHolder.java', 'net/swedz/tesseract/neoforge/datagen/mi/client/TexturesMIHookDatagenProvider.java', 'net/swedz/tesseract/neoforge/compat/mi/hack/FakedMachineModelBuilder.java')
+// Publish the self-contained mod, including the plain Java Tesseract API library.
+tasks.named('jar') { archiveClassifier = 'slim' }
+tasks.named('jarJar') { archiveClassifier = '' }
+configurations.apiElements.outgoing.artifacts.clear()
+configurations.runtimeElements.outgoing.artifacts.clear()
+configurations.apiElements.outgoing.artifact(tasks.named('jarJar'))
+configurations.runtimeElements.outgoing.artifact(tasks.named('jarJar'))

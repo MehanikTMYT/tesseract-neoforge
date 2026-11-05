@@ -1,0 +1,37 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "mixinextras": {
+        "minVersion": "0.5.0"
+    },
+    "package": "net.swedz.tesseract.neoforge.compat.mi.mixin",
+    "plugin": "net.swedz.tesseract.neoforge.compat.mi.MIMixinPlugin",
+    "compatibilityLevel": "JAVA_25",
+    "mixins": [
+        "ActiveRecipeHolderMixin",
+        "FixSteelUpgradeItemMixin",
+        "accessor.CasingComponentAccessor",
+        "accessor.ConfigurableStackAccessor",
+        "accessor.CrafterComponentAccessor",
+        "accessor.MachineCasingAccessor",
+        "accessor.MIMachineRecipeTypesAccessor",
+        "accessor.OverdriveComponentAccessor",
+        "accessor.RedstoneControlComponentAccessor",
+        "accessor.SteamCraftingMultiblockBlockEntityAccessor",
+        "accessor.UpgradeComponentAccessor",
+        "hook.efficiency.CrafterComponentBehaviorEfficiencyHookMixin",
+        "hook.efficiency.CrafterComponentEfficiencyHookMixin",
+        "hook.efficiency.EBFEfficiencyHookMixin",
+        "hook.efficiency.RecipeEfficiencyBarEfficiencyHookMixin",
+        "hook.listener.BeforeAfterInitHookMixin",
+        "hook.listener.BlastFurnaceTierHookMixin",
+        "hook.listener.TooltipsHookMixin"
+    ],
+    "client": [
+        "client.hook.GuiComponentsClientHookMixin",
+        "hook.listener.ViewerSetupHookMixin"
+    ],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

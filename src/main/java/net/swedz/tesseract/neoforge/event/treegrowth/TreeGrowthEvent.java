@@ -38,7 +38,7 @@ public final class TreeGrowthEvent extends BlockEvent
 			Identifier.fromNamespaceAndPath("regions_unexplored", "brim_willow"),
 			Identifier.fromNamespaceAndPath("regions_unexplored", "tall_brim_willow")
 	);
-	
+
 	/**
 	 * <p>Defines features by namespace and configuration class name that should be considered trees for the sake of
 	 * {@link TreeGrowthEvent}.</p>
@@ -52,31 +52,31 @@ public final class TreeGrowthEvent extends BlockEvent
 			new SpecificFeatureConfiguration("regions_unexplored", "GiantBioshroomConfiguration"),
 			new SpecificFeatureConfiguration("regions_unexplored", "RuTreeConfiguration")
 	);
-	
+
 	private record SpecificFeatureConfiguration(
 			String namespace,
 			String configurationClassName
 	)
 	{
 	}
-	
+
 	private static boolean calculateShouldPostEventFor(Feature feature, FeatureConfiguration configuration)
 	{
 		var featureId = BuiltInRegistries.FEATURE.getKey(feature);
-		
+
 		if(featureId == null)
 		{
 			return false;
 		}
-		
+
 		if(TREE_FEATURE_IDS.contains(featureId))
 		{
 			return true;
 		}
-		
+
 		var featureNamespace = featureId.getNamespace();
 		var configurationClassName = configuration.getClass().getSimpleName();
-		
+
 		for(var specific : FEATURE_CONFIGURATIONS)
 		{
 			if(featureNamespace.equals(specific.namespace()) &&
@@ -85,31 +85,31 @@ public final class TreeGrowthEvent extends BlockEvent
 				return true;
 			}
 		}
-		
+
 		return false;
 	}
-	
+
 	public static boolean shouldPostEventFor(Feature feature, FeatureConfiguration configuration)
 	{
-		if(feature.needsToCalculateShouldPostTreeGrowthEvent())
+		if(((TreeGrowthFeatureTestCache) feature).needsToCalculateShouldPostTreeGrowthEvent())
 		{
 			boolean should = calculateShouldPostEventFor(feature, configuration);
-			feature.setShouldPostTreeGrowthEvent(should);
+			((TreeGrowthFeatureTestCache) feature).setShouldPostTreeGrowthEvent(should);
 			return should;
 		}
-		return feature.shouldPostTreeGrowthEvent();
+		return ((TreeGrowthFeatureTestCache) feature).shouldPostTreeGrowthEvent();
 	}
-	
+
 	private final List<BlockPos> positions;
-	
+
 	public TreeGrowthEvent(LevelAccessor level, BlockPos pos, BlockState state, Collection<BlockPos> positions)
 	{
 		super(level, pos.immutable(), state);
-		
+
 		this.positions = Lists.newArrayList();
 		this.positions.addAll(positions);
 	}
-	
+
 	public List<BlockPos> getPositions()
 	{
 		return new ArrayList<>(positions);

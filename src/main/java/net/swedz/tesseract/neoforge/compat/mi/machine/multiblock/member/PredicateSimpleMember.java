@@ -1,0 +1,52 @@
+package net.swedz.tesseract.neoforge.compat.mi.machine.multiblock.member;
+
+import aztech.modern_industrialization.machines.multiblocks.SimpleMember;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.RegistryAccess;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+
+public final class PredicateSimpleMember implements SimpleMember
+{
+	private final Predicate<BlockState> predicate;
+	private final Supplier<BlockState>  preview;
+
+	public PredicateSimpleMember(Predicate<BlockState> predicate, Supplier<BlockState> preview)
+	{
+		this.predicate = predicate;
+		this.preview = preview;
+	}
+
+	public PredicateSimpleMember(Predicate<BlockState> predicate, BlockState preview)
+	{
+		this(predicate, () -> preview);
+	}
+
+	public PredicateSimpleMember(Predicate<BlockState> predicate, Block preview)
+	{
+		this(predicate, preview::defaultBlockState);
+	}
+
+	@Override
+	public boolean matchesState(BlockState state, BlockEntity blockEntity)
+	{
+		return predicate.test(state);
+	}
+
+	@Override
+	public BlockEntity newBlockEntity(RegistryAccess registries, Level level, BlockPos pos, BlockState state)
+	{
+		return null;
+	}
+
+	@Override
+	public BlockState getPreviewState()
+	{
+		return preview.get();
+	}
+}

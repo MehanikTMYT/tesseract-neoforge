@@ -1,0 +1,117 @@
+package net.swedz.tesseract.neoforge.compat.mi.hook;
+
+import com.google.common.collect.Lists;
+import net.minecraft.resources.Identifier;
+import net.swedz.tesseract.neoforge.Tesseract;
+
+import java.util.List;
+import java.util.Objects;
+
+public final class MIHook
+{
+	private final String modId;
+
+	private MIHookRegistry   registry           = MIHookRegistry.NONE;
+	private MIHookListener   listener           = MIHookListener.NONE;
+	private MIHookEfficiency efficiencyListener = MIHookEfficiency.NONE;
+
+	private final List<Runnable> tasks = Lists.newCopyOnWriteArrayList();
+
+	private boolean executedEnqueuedTasks = false;
+
+	public MIHook(String modId)
+	{
+		this.modId = modId;
+	}
+
+	public String modId()
+	{
+		return modId;
+	}
+
+	public Identifier id(String path)
+	{
+		return Identifier.fromNamespaceAndPath(modId, path);
+	}
+
+	public MIHookRegistry registry()
+	{
+		return registry;
+	}
+
+	public boolean hasRegistry()
+	{
+		return registry != MIHookRegistry.NONE;
+	}
+
+	public MIHookListener listener()
+	{
+		return listener;
+	}
+
+	public boolean hasListener()
+	{
+		return listener != MIHookListener.NONE;
+	}
+
+	public MIHookEfficiency efficiencyListener()
+	{
+		return efficiencyListener;
+	}
+
+	public boolean hasEfficiencyListener()
+	{
+		return efficiencyListener != MIHookEfficiency.NONE;
+	}
+
+	MIHook withListener(MIHookListener listener)
+	{
+		Objects.requireNonNull(listener);
+
+		this.listener = listener;
+
+		return this;
+	}
+
+	MIHook withRegistry(MIHookRegistry registry)
+	{
+		Objects.requireNonNull(registry);
+
+		this.registry = registry;
+
+		return this;
+	}
+
+	MIHook withEfficiencyListener(MIHookEfficiency efficiencyListener)
+	{
+		Objects.requireNonNull(efficiencyListener);
+
+		this.efficiencyListener = efficiencyListener;
+
+		return this;
+	}
+
+	public void enqueue(Runnable task)
+	{
+		if(executedEnqueuedTasks)
+		{
+			throw new IllegalStateException("Cannot enqueue task after tasks have already been executed");
+		}
+		tasks.add(task);
+	}
+
+	void executeEnqueuedTasks()
+	{
+		executedEnqueuedTasks = true;
+		Tesseract.LOGGER.info("Executing enqueued MI hook tasks for {}", modId);
+		try
+		{
+			tasks.forEach(Runnable::run);
+		}
+		catch(Exception ex)
+		{
+			throw new RuntimeException("Failed to execute enqueued MI hook tasks for " + modId, ex);
+		}
+		tasks.clear();
+	}
+}

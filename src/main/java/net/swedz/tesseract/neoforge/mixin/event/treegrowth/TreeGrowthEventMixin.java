@@ -51,14 +51,14 @@ public class TreeGrowthEventMixin
 			if(TreeGrowthEvent.shouldPostEventFor(feature, configuration))
 			{
 				actualLevelReference.set(actualLevel);
-				
+
 				Set<BlockPos> trackedBlockChanges = Sets.newConcurrentHashSet();
 				trackedBlockChangesReference.set(trackedBlockChanges);
-				actualLevel.startTrackingBlockChanges(trackedBlockChanges);
+				((net.swedz.tesseract.neoforge.event.treegrowth.TrackBlockChangesExtension) actualLevel).startTrackingBlockChanges(trackedBlockChanges);
 			}
 		}
 	}
-	
+
 	@WrapOperation(
 			method = "place(Lnet/minecraft/world/level/levelgen/feature/configurations/FeatureConfiguration;Lnet/minecraft/world/level/WorldGenLevel;Lnet/minecraft/world/level/chunk/ChunkGenerator;Lnet/minecraft/util/RandomSource;Lnet/minecraft/core/BlockPos;)Z",
 			at = @At(
@@ -77,13 +77,13 @@ public class TreeGrowthEventMixin
 	)
 	{
 		boolean result = original.call(instance, context);
-		
+
 		var actualLevel = actualLevelReference.get();
 		if(actualLevel != null)
 		{
-			actualLevel.stopTrackingBlockChanges();
+			((net.swedz.tesseract.neoforge.event.treegrowth.TrackBlockChangesExtension) actualLevel).stopTrackingBlockChanges();
 		}
-		
+
 		if(result)
 		{
 			var trackedBlockChanges = trackedBlockChangesReference.get();
@@ -98,7 +98,7 @@ public class TreeGrowthEventMixin
 				NeoForge.EVENT_BUS.post(event);
 			}
 		}
-		
+
 		return result;
 	}
 }

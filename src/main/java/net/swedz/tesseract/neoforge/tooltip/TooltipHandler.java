@@ -15,12 +15,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class TooltipHandler
 {
 	private static final ConcurrentLinkedQueue<TooltipAttachment> TOOLTIPS = new ConcurrentLinkedQueue<>();
-	
+
 	static void register(TooltipAttachment tooltip)
 	{
 		TOOLTIPS.add(tooltip);
 	}
-	
+
 	public static void attach(TooltipFlag flags, Item.TooltipContext context, ItemStack stack, List<Component> lines)
 	{
 		Item item = stack.getItem();
@@ -37,11 +37,10 @@ public final class TooltipHandler
 				else if(tooltip.requiresShift() && !hasPrintRequiredShift && maybeComponents.isPresent())
 				{
 					hasPrintRequiredShift = true;
-					// TODO wait for MI
-					/*if(Proxies.get(TesseractMIProxy.class).anyShiftTooltipsAreFor(stack, item))
+					if(Proxies.get(net.swedz.tesseract.neoforge.compat.mi.proxy.TesseractMIProxy.class).anyShiftTooltipsAreFor(context, stack, item))
 					{
 						continue;
-					}*/
+					}
 					lines.add(Tesseract.text().tooltipsShiftRequired());
 				}
 			}
