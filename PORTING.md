@@ -33,8 +33,8 @@ Native energy moves are atomic; each move is capped at Integer.MAX_VALUE,
 as required by the new transfer API. Recipe helpers use MI itemIn/itemOut and
 fluidIn/fluidOut. Casing and machine state/item models use the 26.1 codecs.
 The MI mixin is enabled in neoforge.mods.toml, with Java 25 compatibility;
-its readNbt injection was migrated to ValueInput. Runtime mixin application
-and gameplay have not yet been tested.
+its readNbt injection was migrated to ValueInput. Client datagen and dedicated-server data-loader startup with Overdrive were
+subsequently verified (see integration results below); gameplay is not tested.
 
 AT is explicitly wired to NeoGradle; interface-injected tree-growth calls
 use explicit casts to the interfaces implemented by their existing mixins.
@@ -71,3 +71,16 @@ converting ItemStackTemplate to ItemStack. Shaped/shapeless recipe conversion
 now retains ItemStackTemplate directly, including output component patches.
 Recipe inversion accesses the template item without constructing a live stack.
 - build-template.log and publish-template.log: PASS, exit 0 after retaining ItemStackTemplate.
+
+## Verified integration results
+
+Overdrive `runClientData` (datagen-04.log): PASS, exit 0, all providers.
+Overdrive `runServerData` (server-data.log): PASS, exit 0, dedicated environment
+mod loading and MI hook registration; no world/gameplay server was started.
+Evidence: `../Industrialization-Overdrive/.port-tools/logs/round2/`.
+These runs exercised the enabled MI mixin configuration and both client/common
+mod startup without mixin or mod-loading errors. The client log has an optional
+missing JEI target warning from the external EMI artifact; JEI is not installed.
+All 20 required bridge classes and embedded API were checked in the published
+jar. Published jar SHA256:
+`373c78a7049ddf86c6bf1319b913a290636229df958e11586eb571582a962a67`.
