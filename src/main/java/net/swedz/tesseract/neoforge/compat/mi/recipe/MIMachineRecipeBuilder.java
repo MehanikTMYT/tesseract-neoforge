@@ -45,18 +45,18 @@ public class MIMachineRecipeBuilder extends MIRecipeJson<MIMachineRecipeBuilder>
 
 	public static MIMachineRecipeBuilder fromShaped(ShapedRecipeBuilder shaped, MachineRecipeType machine, int eu, int duration, int division)
 	{
-		ItemStack result = shaped.result().create();
+		net.minecraft.world.item.ItemStackTemplate result = shaped.result();
 		if(result == null)
 		{
 			throw new NullPointerException("No result set for recipe");
 		}
-		if(result.getCount() % division != 0)
+		if(result.count() % division != 0)
 		{
 			throw new IllegalArgumentException("Output must be divisible by division");
 		}
 
 		MIMachineRecipeBuilder machineRecipe = new MIMachineRecipeBuilder(machine, eu, duration)
-				.itemOut(result.getItem(), result.getCount() / division);
+				.itemOut(result.withCount(result.count() / division), 1f);
 		for(Map.Entry<Character, Ingredient> entry : shaped.key().entrySet())
 		{
 			int count = 0;
@@ -89,18 +89,18 @@ public class MIMachineRecipeBuilder extends MIRecipeJson<MIMachineRecipeBuilder>
 
 	public static MIMachineRecipeBuilder fromShapeless(ShapelessRecipeBuilder shaped, MachineRecipeType machine, int eu, int duration, int division)
 	{
-		ItemStack result = shaped.result().create();
+		net.minecraft.world.item.ItemStackTemplate result = shaped.result();
 		if(result == null)
 		{
 			throw new NullPointerException("No result set for recipe");
 		}
-		if(result.getCount() % division != 0)
+		if(result.count() % division != 0)
 		{
 			throw new IllegalArgumentException("Output must be divisible by division");
 		}
 
 		MIMachineRecipeBuilder machineRecipe = new MIMachineRecipeBuilder(machine, eu, duration)
-				.itemOut(result.getItem(), result.getCount() / division);
+				.itemOut(result.withCount(result.count() / division), 1f);
 		for(Ingredient ingredient : shaped.input())
 		{
 			int count = 0;
@@ -155,7 +155,7 @@ public class MIMachineRecipeBuilder extends MIRecipeJson<MIMachineRecipeBuilder>
 
 		for(MachineRecipe.ItemOutput itemOutput : recipe.itemOutputs)
 		{
-			inversedRecipe.itemIn(net.neoforged.neoforge.transfer.item.ItemResource.of(itemOutput.getStack()).getItem(), itemOutput.template().count(), itemOutput.probability());
+			inversedRecipe.itemIn(itemOutput.template().item().value(), itemOutput.template().count(), itemOutput.probability());
 		}
 
 		for(MachineRecipe.FluidOutput fluidOutput : recipe.fluidOutputs)

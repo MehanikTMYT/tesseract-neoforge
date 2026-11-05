@@ -65,3 +65,9 @@ exposed the need to pass the datagen HolderLookup.Provider to MIRecipeJson.
 Added an explicit provider constructor; consumers must use it for tag inputs.
 - build-integration.log: PASS, exit 0 after adding the datagen registry constructor.
 - publish-integration.log: PASS, exit 0; same required fleet coordinates refreshed.
+
+A further datagen check exposed unbound data-only component holders when
+converting ItemStackTemplate to ItemStack. Shaped/shapeless recipe conversion
+now retains ItemStackTemplate directly, including output component patches.
+Recipe inversion accesses the template item without constructing a live stack.
+- build-template.log and publish-template.log: PASS, exit 0 after retaining ItemStackTemplate.
