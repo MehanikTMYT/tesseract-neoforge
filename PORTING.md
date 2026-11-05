@@ -56,3 +56,12 @@ never considered success just because grep has no error lines.
 - build.log: PASS, exit 0.
 - build-final.log: PASS, exit 0, self-contained primary artifact (JarJar).
 - publish.log: PASS, exit 0. Published primary jar/module/POM/sources verified in MavenLocal; API/runtime module variants point to the self-contained jar. All 20 classes in Overdrive missing-mi-bridge.txt are present.
+
+## Integration follow-up
+
+Overdrive client datagen loads the bridge and MI hooks without mixin failure,
+and native casing/machine/item codecs generate successfully. Recipe datagen
+exposed the need to pass the datagen HolderLookup.Provider to MIRecipeJson.
+Added an explicit provider constructor; consumers must use it for tag inputs.
+- build-integration.log: PASS, exit 0 after adding the datagen registry constructor.
+- publish-integration.log: PASS, exit 0; same required fleet coordinates refreshed.

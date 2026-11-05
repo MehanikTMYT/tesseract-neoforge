@@ -33,6 +33,11 @@ public class MIMachineRecipeBuilder extends MIRecipeJson<MIMachineRecipeBuilder>
 		super(net.minecraft.core.registries.BuiltInRegistries.FLUID, net.minecraft.core.registries.BuiltInRegistries.ITEM, type, eu, duration);
 	}
 
+    public MIMachineRecipeBuilder(net.minecraft.core.HolderLookup.Provider registries, MachineRecipeType type, int eu, int duration)
+    {
+        super(registries.lookupOrThrow(net.minecraft.core.registries.Registries.FLUID), registries.lookupOrThrow(net.minecraft.core.registries.Registries.ITEM), type, eu, duration);
+    }
+
 	public MIMachineRecipeBuilder(MIRecipeJson<?> otherWithSameData)
 	{
 		super(otherWithSameData);
