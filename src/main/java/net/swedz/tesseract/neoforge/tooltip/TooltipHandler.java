@@ -8,6 +8,8 @@ import net.swedz.tesseract.neoforge.Tesseract;
 import net.swedz.tesseract.neoforge.proxy.Proxies;
 import net.swedz.tesseract.neoforge.proxy.builtin.TesseractProxy;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -15,10 +17,13 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public final class TooltipHandler
 {
 	private static final ConcurrentLinkedQueue<TooltipAttachment> TOOLTIPS = new ConcurrentLinkedQueue<>();
+	private static final List<TooltipAttachment> SORTED_TOOLTIPS = new ArrayList<>();
 
 	static void register(TooltipAttachment tooltip)
 	{
 		TOOLTIPS.add(tooltip);
+		SORTED_TOOLTIPS.add(tooltip);
+		Collections.sort(SORTED_TOOLTIPS);
 	}
 
 	public static void attach(TooltipFlag flags, Item.TooltipContext context, ItemStack stack, List<Component> lines)
@@ -27,7 +32,7 @@ public final class TooltipHandler
 		if(item != null)
 		{
 			boolean hasPrintRequiredShift = false;
-			for(TooltipAttachment tooltip : TOOLTIPS)
+			for(TooltipAttachment tooltip : SORTED_TOOLTIPS)
 			{
 				Optional<List<? extends Component>> maybeComponents = tooltip.lines(flags, context, stack);
 				if(!tooltip.requiresShift() || Proxies.get(TesseractProxy.class).hasShiftDown())
