@@ -5,8 +5,10 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLConstructModEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.data.event.GatherDataEvent;
 import net.neoforged.neoforge.event.entity.living.LivingEquipmentChangeEvent;
@@ -52,6 +54,9 @@ public final class Tesseract
 			{
 			}
 			net.swedz.tesseract.neoforge.compat.mi.TesseractMILootConditions.init(bus);
+			// Drain after all mod constructors have registered their MI content, on the main thread.
+			bus.addListener(EventPriority.HIGHEST, FMLConstructModEvent.class, (event) -> event.enqueueWork(
+					net.swedz.tesseract.neoforge.compat.mi.hook.MIHooks::executeEnqueuedTasks));
 		}
 
 		bus.addListener(GatherDataEvent.Client.class, (event) ->
