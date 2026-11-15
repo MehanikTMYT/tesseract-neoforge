@@ -12,18 +12,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public final class TooltipHandler
 {
-	private static final ConcurrentLinkedQueue<TooltipAttachment> TOOLTIPS = new ConcurrentLinkedQueue<>();
-	private static final List<TooltipAttachment> SORTED_TOOLTIPS = new ArrayList<>();
+	// Readers iterate immutable snapshots; registrations serialize publication so none are lost.
+	private static volatile List<TooltipAttachment> SORTED_TOOLTIPS = List.of();
 
-	static void register(TooltipAttachment tooltip)
+	static synchronized void register(TooltipAttachment tooltip)
 	{
-		TOOLTIPS.add(tooltip);
-		SORTED_TOOLTIPS.add(tooltip);
-		Collections.sort(SORTED_TOOLTIPS);
+		List<TooltipAttachment> sorted = new ArrayList<>(SORTED_TOOLTIPS);
+		sorted.add(tooltip);
+		Collections.sort(sorted);
+		SORTED_TOOLTIPS = List.copyOf(sorted);
 	}
 
 	public static void attach(TooltipFlag flags, Item.TooltipContext context, ItemStack stack, List<Component> lines)
